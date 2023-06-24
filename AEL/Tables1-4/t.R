@@ -1,15 +1,15 @@
 #===============================================
-#             SARAR model N(0,1)
+#             SARAR model t(df)
 #===============================================
 
-SARAR.model.N<-function(nsim,rou1,rou2,sigma2){
-
+SARAR.model.t<-function(nsim,rou1,rou2,df,size){
+  
   beta=3.5
   tol=1e-4
   a=0.95
   k=length(beta)
   cut = qchisq(a,k+3)
-  size = c(16, 20)
+  
   zero = 0
   azero = 0
   ff_el = c()
@@ -58,7 +58,7 @@ SARAR.model.N<-function(nsim,rou1,rou2,sigma2){
     f2 = 0
     for(i in 1:nsim){
       # cat('样本个数为',n,'正在模拟第 ',i,'次','\n')
-      En = rnorm(n,0,sqrt(sigma2))
+      En = rt(n,df);sigma2=df/(df-2)
       e = En
       # 模拟Yi(程序运行不需要Yi值)
       # Yn = Ani%*%Xn%*%beta + Ani%*%Bni%*%En
@@ -88,19 +88,17 @@ SARAR.model.N<-function(nsim,rou1,rou2,sigma2){
       # if(max(abs(glam))>tol) azero=azero+1
     }
     # cat('样本个数为',n,'完成模拟',i,'次',zero,azero,'\n')
-    # cat(paste0('N(0,',sqrt(sigma2),') ',n),' ',f1/nsim,f2/nsim,'\n')
+    # cat(paste0('t(',df,') ',n),' ',f1/nsim,f2/nsim,'\n')
     ff_el=append(ff_el,f1/nsim)
     ff_ael=append(ff_ael,f2/nsim)
     zero = 0
     azero = 0
     # Sys.sleep(10)
   }
-  ff = matrix(NA,nrow=length(size),ncol=2)
+  ff=matrix(NA,nrow=length(size),ncol=2)
   ff[,1]=ff_el
   ff[,2]=ff_ael
   rownames(ff) <- size^2
   colnames(ff) <- c("EL","AEL")
   print(ff)
 }
-
-

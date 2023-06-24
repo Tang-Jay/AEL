@@ -1,21 +1,64 @@
 #===============================================
-#             SARAR model                      #
+#                    Table 5                   #
 #===============================================
+# Remark:
+# 这是用来统计两种方法运行时间的程序
 
-# source('Main.R')
 # install.packages("raster",type='binary')
 # install.packages("spData",type='binary')
 # install.packages("terra",type='binary')
 # library('spData')
 
-rm(list = ls()) 	
-source('GlambdaChen.R')
+rm(list = ls())
 library('sp')
 library('sf')
 library('spData')
 library('terra')
 library('spdep')
-nsim = 5000
+
+#===============================================
+#                 计算lambda程序
+#===============================================
+lambdaChen<-function(u){
+  n=dim(u)[1]
+  df=dim(u)[2]
+  M=rep(0,df)
+  k=0
+  gama=1
+  tol=1e-11
+  dif=1
+  R<-function(lam){R0=sum(log(1+t(lam)%*%t(u)));return(R0)}
+  R1=rep(0,df)
+  R2=R1%*%t(R1)
+  
+  while(dif>tol && k<=300){
+    # 计算R1、R2
+    aa=1+t(M)%*%t(u)
+    for(i in 1:df){
+      R1[i]=sum(t(u[,i])/aa)
+      for(j in 1:df){
+        R2[i,j]=-sum(u[,i]*u[,j]/aa^2)
+      }
+    }
+    delta=-solve(R2)%*%R1
+    dif=c(sqrt(t(delta)%*%delta))
+    sigma=gama*delta
+    while(min(1+t(M+sigma)%*%t(u))<=0){
+      gama=gama/2
+      sigma=gama*delta
+    }
+    # print(k)
+    M=M+sigma
+    gama=1/sqrt(k+1)
+    k=k+1
+  }
+  # cat(k,'\n')
+  return(M)
+} 
+#===================================================#
+#                      修改模拟参数
+#===================================================#
+nsim = 1000
 beta = 3.5
 rou1 = 0.85
 rou2 = 0.15
@@ -23,8 +66,10 @@ tol = 1e-6
 a = 0.95
 k = length(beta)
 cut = qchisq(a,k+3)
-size = c(3,4,5,6,7,10,13,16,20)
-#================EL、AEL计时=======================#
+size = c(3,7,10,13,16)
+#===================================================#
+#                 EL、AEL计时程序启动
+#===================================================#
 zero = 0
 azero = 0
 tt1=0
@@ -56,9 +101,9 @@ for (m in size){
   s = Bn%*%Wn%*%Ani%*%Xn%*%beta
   f<-function(Matrix,Vector){
     irow = nrow(Matrix)
-    v =c(0)
+    v = c(0)
     for(i in 2:irow){
-      v[i] =Matrix[i,][1:(i-1)]%*%Vector[1:i-1]
+      v[i] = Matrix[i,][1:(i-1)]%*%Vector[1:i-1]
     }
     return(v)
   }
@@ -101,7 +146,7 @@ for (m in size){
     aglam=rowSums(t(az)/t(matrix(rep(aa,2),n+1,k+3)))
     if(max(abs(aglam))>tol) azero=azero+1
   }
-  cat('样本个数为',n,'完成模拟',m,'次',tol,zero,azero,'\n')
+  # cat('样本个数为',n,'完成模拟',m,'次',tol,zero,azero,'\n')
   ff_el=append(ff_el,f1/nsim)
   ff_time=append(ff_time,tt1)
   ff_ael=append(ff_ael,f2/nsim)
@@ -113,7 +158,9 @@ for (m in size){
 }
 T2<-lubridate::now()
 TT<-T2-T1
-#==================结果显示========================#
+#===================================================#
+#                   模拟结果可视化
+#===================================================#
 ff = matrix(NA,nrow=length(size),ncol=4)
 ff[,1]=ff_el
 ff[,2]=ff_ael
